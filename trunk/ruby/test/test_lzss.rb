@@ -86,11 +86,25 @@ class TC_LZSS < Test::Unit::TestCase
     check_string("hogehogehoge")
     check_string("hffffafffddfff")    
     check_string("あなたあなたかぜ")
+    check_string(File.open("test/sample1.txt").read)
   end
+
+  def test_encode_random
+    return
+    100.times do
+      rand_string = ""
+      10000.times do |d|
+        rand_string << ULZSS.short2utf8(rand(65535) + 1)
+      end
+      check_string(rand_string)
+    end
+  end
+
   
   def check_string(string)
     code = ULZSS.encode(string)
     s = ULZSS.decode(code)
+    #p [s.length, code.length]
     assert(string ==  s)
   end
 end
