@@ -77,7 +77,7 @@ module ULZSS
       if d = @hash[key]
         d.each do |pos|
           real_pos = @offset + pos
-          if @current - real_pos > N
+          if @current - real_pos >= N
             next
           end
           j = 0 
@@ -143,6 +143,17 @@ module ULZSS
       return 2
     when 14
       return 3
+    when 15
+      case chur >> 2
+      when 60, 61
+        return 4
+      when 62
+        return 5
+      when 63
+        return 6
+      else
+        raise "invalid utf8 char: #{chr.to_i}"
+      end
     else
       raise "invalid utf8 char: #{chr.to_i}"
     end
@@ -150,65 +161,58 @@ module ULZSS
 
   def self.encode(input)
     window = Window.new(input)
-    header = ""
-    header_len = 0
     body = ""
+    buffer = ""
     flag = 0
     mask = 1
-    po = pc = -1
     while window.next
       if window.flag
         flag |= mask
-        # 一致位置とサイズをエンコードする
-
+        # encode match_pos and match_len
         code = window.match_pos + 
           (window.match_len - Window::MIN_LEN - 1) * 4096
         #p [window.match_pos, window.match_len, code]
-        body << short2utf8(code)
+        buffer << short2utf8(code)
       else
-        # 不一致情報とUTF8文字をエンコードする
-        body << window.prvious_char
+        # encode the orginal UTF8 char
+        buffer << window.prvious_char
       end  
       mask <<= 1
       if mask == 0x40
         mask = 1
         s = flag + 0x20
+        body << s << buffer
+        buffer = ""
         #puts(format("flag = %d (%s)", flag, s.inspect))
-        header << s
-        header_len += 1
         flag = 0
       end
-      po = window.offset
-      pc = window.current
     end
     unless mask == 1
       #puts(format("flag = %d", flag))
       s = flag + 0x20
-      header << s
-      header_len += chr_size(s[0])
-      #puts(format("header_len = %d", header_len))
+      body << s << buffer
     end
     #puts
-    return int2str(header_len) + header + body
+    return body
   end
 
   def self.decode(input)
-    header_len = str2int(input[0, 5])
     size = input.length
-    i = 5 + header_len
+    i = 1
     current = 0
     output = ""
+    
     mask = 0
-    csize = chr_size(input[5])
-    flag = input[5] - 0x20
+    flag = input[0] - 0x20
+    #p flag
     count = 0
-    header_pos = 5 + csize
     while i < size
       if flag & 1 == 1
         csize = chr_size(input[i])
         code = utf82short(input[i, csize])
         match_len = code / 4096 + Window::MIN_LEN + 1
         match_pos = code % 4096
+        #p [match_pos, match_len, code]
         match_len.times do |j|
           output << output[current - match_pos + j]
         end
@@ -222,9 +226,10 @@ module ULZSS
         current += csize
       end
       count += 1
-      if count == 6
-        flag = input[header_pos] - 0x20
-        header_pos += 1
+      if count == 6 and i < size
+        flag = input[i] - 0x20
+        #p flag
+        i += 1
         count = 0
       else
         flag >>= 1
@@ -233,50 +238,30 @@ module ULZSS
     output
   end
 
-  class << self
-    def short2utf8(short)
-      c = short + 32
-      if c <= 0x7F 
-        return c.chr
-      elsif c > 0x7FF
-        return (0xE0 | ((c >> 12) & 0x0F)).chr +
-          (0x80 | ((c >>  6) & 0x3F)).chr +
-          (0x80 | (c & 0x3F)).chr
-        else 
-        return (0xC0 | ((c >>  6) & 0x1F)).chr + 
-          (0x80 | (c & 0x3F)).chr
-      end
+  def self.short2utf8(short)
+    c = short + 32
+    if c <= 0x7F 
+      return c.chr
+    elsif c > 0x7FF
+      return (0xE0 | ((c >> 12) & 0x0F)).chr +
+        (0x80 | ((c >>  6) & 0x3F)).chr +
+        (0x80 | (c & 0x3F)).chr
+    else 
+      return (0xC0 | ((c >>  6) & 0x1F)).chr + 
+        (0x80 | (c & 0x3F)).chr
     end
+  end
 
-    def utf82short(str)
-      case str[0] >> 4
-      when 0 .. 7
-        return str[0] - 32
-      when 12, 13
-        return  - 32 + ((str[0] & 0x1F) << 6) + (str[1] & 0x3F)
-      when 14
-        return  - 32 + (((str[0] & 0x0F) << 12) +
-                        ((str[1] & 0x3F) << 6)  +
-                        ((str[2] & 0x3F) << 0))
-      end
-    end
-      
-    def int2str(int)
-      str = (int % 94 + 32).chr 
-      str += ( (int / 94) % 94 + 32).chr 
-      str += ( (int / 8836) % 94 + 32).chr 
-      str += ( (int / 830584) % 94 + 32).chr 
-      str += ( (int / 78074896) % 94 + 32).chr 
-      return str
-    end
-    
-    def str2int(str)
-      int = str[0] - 32
-      int += (str[1] - 32) * 94
-      int += (str[2] - 32) * 8836
-      int += (str[3] - 32) * 830584
-      int += (str[4] - 32) * 78074896
-      int
+  def self.utf82short(str)
+    case str[0] >> 4
+    when 0 .. 7
+      return str[0] - 32
+    when 12, 13
+      return  - 32 + ((str[0] & 0x1F) << 6) + (str[1] & 0x3F)
+    when 14
+      return  - 32 + (((str[0] & 0x0F) << 12) +
+                      ((str[1] & 0x3F) << 6)  +
+                      ((str[2] & 0x3F) << 0))
     end
   end
 end
