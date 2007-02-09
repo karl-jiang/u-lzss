@@ -170,12 +170,12 @@ module ULZSS
         body << window.prvious_char
       end  
       mask <<= 1
-      if mask == 65536
+      if mask == 0x40
         mask = 1
-        s = short2utf8(flag)
+        s = flag + 0x20
         #puts(format("flag = %d (%s)", flag, s.inspect))
         header << s
-        header_len += chr_size(s[0])
+        header_len += 1
         flag = 0
       end
       po = window.offset
@@ -183,7 +183,7 @@ module ULZSS
     end
     unless mask == 1
       #puts(format("flag = %d", flag))
-      s = short2utf8(flag)
+      s = flag + 0x20
       header << s
       header_len += chr_size(s[0])
       #puts(format("header_len = %d", header_len))
@@ -194,15 +194,13 @@ module ULZSS
 
   def self.decode(input)
     header_len = str2int(input[0, 5])
-    #puts(format("header_len = %d", header_len))
     size = input.length
     i = 5 + header_len
     current = 0
     output = ""
     mask = 0
     csize = chr_size(input[5])
-    flag = utf82short(input[5, csize])
-    #puts(format("flag = %d", flag))
+    flag = input[5] - 0x20
     count = 0
     header_pos = 5 + csize
     while i < size
@@ -211,12 +209,9 @@ module ULZSS
         code = utf82short(input[i, csize])
         match_len = code / 4096 + Window::MIN_LEN + 1
         match_pos = code % 4096
-        #p "[p, l] = #{[match_pos, match_len].inspect}"
         match_len.times do |j|
-          #p output[current - match_pos + j]
           output << output[current - match_pos + j]
         end
-        #p output
         current += match_len
         i += csize
       else
@@ -227,11 +222,9 @@ module ULZSS
         current += csize
       end
       count += 1
-      if count == 16
-        csize = chr_size(input[header_pos])
-        flag = utf82short(input[header_pos, csize])
-        #puts(format("flag = %d (%s)", flag, input[header_pos, csize].inspect))
-        header_pos += csize
+      if count == 6
+        flag = input[header_pos] - 0x20
+        header_pos += 1
         count = 0
       else
         flag >>= 1
