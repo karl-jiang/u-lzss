@@ -1,6 +1,5 @@
 require "test/unit"
 require "ulzss"
-require "stringio"
 class TC_LZSS < Test::Unit::TestCase
   include ULZSS
   def setup
