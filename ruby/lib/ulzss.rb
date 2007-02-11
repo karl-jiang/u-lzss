@@ -16,13 +16,13 @@ module ULZSS
       @hash = {}
     end
     
-    # 現在のポインタ位置を進める。
+    # Move the pointer to the next pointer.
     def next
-      # 入力終端の場合 nil を返却する
+      # Return nil at the end of the string.
       if @current == @size
         return false
       end
-      # 最後の2文字はHashが使えないので文字列マッチしない
+      # Don't use hash in the last two characters.
       if @current + MIN_LEN >= @size
         @current += 1
         @match_len = 1
@@ -63,15 +63,8 @@ module ULZSS
       return @buffer[@current - @match_len, @match_len]
     end
     
-    def current_char
-      return @buffer[@current]
-    end
-
     private
     def search
-      # もし、そのような文字列が存在し、かつ、その長さが定数値(2byte)ならば、
-      # 一致した文字列のバッファ位置を match_pos に格納する。
-      # 一致した文字長を match_len に記録し
       key = hash_value
       @match_len = @match_pos = 0
       if d = @hash[key]
@@ -84,17 +77,18 @@ module ULZSS
           k = 0
           c = 0
           while @buffer[real_pos + j] == @buffer[@current + j] and j < MAX_LEN
+            # Check whether j is the UTF-8 fisrt byte.
             if j == c
-              # UTF8の先頭byteの場合
+              # Set the current pos to k.
               k = c
-              # 次 UTF8先頭byteの場所をcに格納
+              # Save the next UTF-8 first byte pos to c.
               c += ULZSS.chr_size(@buffer[real_pos + j])
             end
             j += 1
           end
-          # 一致しないのが次のUTF8byte先頭の場合
+          # Check whether j is the UTF-8 fisrt byte.
           if j == c
-            # 最後に一致した場所を一致長とする
+            # Set the last matched pos to k.
             k = c
           end
           if k > MIN_LEN and k > @match_len
