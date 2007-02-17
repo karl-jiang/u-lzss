@@ -5,7 +5,8 @@ module ULZSS
   class Window
     attr_reader :flag, :match_pos, :match_len, :offset, :current
     MAX_LEN = 18
-    MIN_LEN = 2
+    MIN_BYTE = 3
+    MIN_LEN = 1
     N = 4096
     M = 2 * N
     def initialize(input)
@@ -18,24 +19,25 @@ module ULZSS
     
     # Move the pointer to the next pointer.
     def next
-      # Return nil at the end of the string.
+      #puts "current = #{@current}"
+      # Return false at the end of the string.
       if @current == @size
         return false
       end
       # Don't use hash in the last two characters.
-      if @current + MIN_LEN >= @size
-        @current += 1
-        @match_len = 1
+      if @current + MIN_BYTE >= @size
+        @match_len = ULZSS.chr_size(@buffer[@current])
+        @current += @match_len
         @flag = false
         return true
       end
       # Search the longest matched string.
       if search
         # if match, move pointer forwards by the matched string size.
-        next_pos = @current + @match_len
+        next_pos = @current + @match_byte
         while @current != next_pos
           # Check the existence of 3-byte characters.
-          if @current + MIN_LEN < @size
+          if @current + MIN_BYTE < @size
             # Register the current pointer to Hash.
             insert_hash
           end
@@ -66,7 +68,7 @@ module ULZSS
     private
     def search
       key = hash_value
-      @match_len = @match_pos = 0
+      @match_len = @match_pos = @match_byte = 0
       if d = @hash[key]
         d.each do |pos|
           real_pos = @offset + pos
@@ -76,6 +78,7 @@ module ULZSS
           j = 0 
           k = 0
           c = 0
+          len = 0
           while @buffer[real_pos + j] == @buffer[@current + j] and j < MAX_LEN
             # Check whether j is the UTF-8 fisrt byte.
             if j == c
@@ -83,6 +86,8 @@ module ULZSS
               k = c
               # Save the next UTF-8 first byte pos to c.
               c += ULZSS.chr_size(@buffer[real_pos + j])
+              # increment match_len
+              len += 1
             end
             j += 1
           end
@@ -90,10 +95,19 @@ module ULZSS
           if j == c
             # Set the last matched pos to k.
             k = c
+          else
+            len -= 1
           end
-          if k > MIN_LEN and k > @match_len
-            @match_len = k
-            @match_pos = @current - real_pos 
+          if k > MIN_BYTE and len > @match_len
+            @match_len = len
+            # @match_pos = @current - real_pos 
+            p = real_pos
+            @match_pos = 0
+            while p != @current
+              p += ULZSS.chr_size(@buffer[p])
+              @match_pos += 1
+            end
+            @match_byte = k
           end
         end
         if @match_len != 0
@@ -169,9 +183,11 @@ module ULZSS
         buffer << short2utf8(code)
       else
         # encode the orginal UTF8 char
+        #puts "#{window.prvious_char} #{window.prvious_char.inspect}"
         buffer << window.prvious_char
-      end  
+      end 
       mask <<= 1
+      #puts "mask = #{mask}, #{buffer}"
       if mask == 0x40
         mask = 1
         s = flag + 0x20
@@ -181,6 +197,7 @@ module ULZSS
         flag = 0
       end
     end
+    #puts "mask = #{mask}"
     unless mask == 1
       #puts(format("flag = %d", flag))
       s = flag + 0x20
@@ -195,27 +212,34 @@ module ULZSS
     i = 1
     current = 0
     output = ""
-    
     mask = 0
     flag = input[0] - 0x20
     #p flag
     count = 0
+    utf8char_offset = []
     while i < size
+      #puts "i: #{current}, #{i} /  #{size}, #{count}, #{input[i, chr_size(input[i])]}"
       if flag & 1 == 1
         csize = chr_size(input[i])
         code = utf82short(input[i, csize])
         match_len = code / 4096 + Window::MIN_LEN + 1
         match_pos = code % 4096
         #p [match_pos, match_len, code]
+        p = utf8char_offset[-match_pos]
         match_len.times do |j|
-          output << output[current - match_pos + j]
+          utf8char_offset << current
+          chr_size(output[p]).times do |l|
+            output << output[p]
+            p += 1
+            current += 1
+          end
         end
-        current += match_len
         i += csize
       else
         fc = input[i]
         csize = chr_size(fc)
         output << input[i, csize]
+        utf8char_offset << current
         i += csize
         current += csize
       end
@@ -228,7 +252,9 @@ module ULZSS
       else
         flag >>= 1
       end
+      #puts "i: #{i} / #{size}"
     end
+    #p utf8char_offset
     output
   end
 
