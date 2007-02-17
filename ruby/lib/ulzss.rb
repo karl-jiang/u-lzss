@@ -5,16 +5,18 @@ module ULZSS
   class Window
     attr_reader :flag, :match_pos, :match_len, :offset, :current
     MAX_LEN = 18
-    MIN_BYTE = 3
+    MIN_BYTE = 2
     MIN_LEN = 1
     N = 4096
-    M = 2 * N
+    M = 3 * N
     def initialize(input)
       @buffer = input
       @offset = -N
       @current = 0
       @size = input.length
       @hash = {}
+      @byte2pos = {}
+      @char_count = 0
     end
     
     # Move the pointer to the next pointer.
@@ -42,6 +44,8 @@ module ULZSS
             insert_hash
           end
           # Move to next the first byte of UTF8 character.
+          @byte2pos[@current] = @char_count
+          @char_count += 1
           @current += ULZSS.chr_size(@buffer[@current])
         end
         @flag = true
@@ -51,6 +55,9 @@ module ULZSS
         # Register the current pointer to Hash.
         insert_hash
         @match_len = ULZSS.chr_size(@buffer[@current])
+
+        @byte2pos[@current] = @char_count
+        @char_count += 1
         # Move pointer forwards by 1-byte.
         @current += @match_len
       end
@@ -72,13 +79,10 @@ module ULZSS
       if d = @hash[key]
         d.each do |pos|
           real_pos = @offset + pos
-          if @current - real_pos >= N
+          if @char_count - @byte2pos[real_pos] >= N
             next
           end
-          j = 0 
-          k = 0
-          c = 0
-          len = 0
+          j = k = c = len = 0
           while @buffer[real_pos + j] == @buffer[@current + j] and j < MAX_LEN
             # Check whether j is the UTF-8 fisrt byte.
             if j == c
@@ -98,15 +102,11 @@ module ULZSS
           else
             len -= 1
           end
-          if k > MIN_BYTE and len > @match_len
+          if len > MIN_LEN and len > @match_len
             @match_len = len
             # @match_pos = @current - real_pos 
             p = real_pos
-            @match_pos = 0
-            while p != @current
-              p += ULZSS.chr_size(@buffer[p])
-              @match_pos += 1
-            end
+            @match_pos = @char_count - @byte2pos[real_pos]
             @match_byte = k
           end
         end
@@ -133,8 +133,9 @@ module ULZSS
     end
 
     def insert_hash
-      @hash[hash_value] ||= []
-      @hash[hash_value] << @current - @offset
+      h = hash_value
+      @hash[h] ||= []
+      @hash[h] << @current - @offset
     end
 
     def hash_value
@@ -180,6 +181,8 @@ module ULZSS
         code = window.match_pos + 
           (window.match_len - Window::MIN_LEN - 1) * 4096
         #p [window.match_pos, window.match_len, code]
+        #p (code + 0x20).to_s(16)
+        #p short2utf8(code)
         buffer << short2utf8(code)
       else
         # encode the orginal UTF8 char
