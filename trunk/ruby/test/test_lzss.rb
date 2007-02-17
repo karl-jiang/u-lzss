@@ -75,23 +75,22 @@ class TC_LZSS < Test::Unit::TestCase
     window.next
     window.next
     window.next
-    assert_equal(true, window.flag)
-    assert_equal(4, window.match_pos)
-    assert_equal(3, window.match_len)
+    assert_equal(false, window.flag)
     window.next
     assert_equal(false, window.next)
   end
   
   def test_encode
     check_string("hogehogehoge")
-    check_string("hffffafffddfff")    
+    check_string("hffffafffddfffhffffafffddfff")
+    check_string("あなたトマトなす")
     check_string("あなたあなたかぜ")
     check_string(File.open("test/sample1.txt").read)
   end
 
   def test_encode_random
-    return
-    100.times do
+    #return
+    10.times do
       rand_string = ""
       10000.times do |d|
         rand_string << ULZSS.short2utf8(rand(65535) + 1)
@@ -105,7 +104,12 @@ class TC_LZSS < Test::Unit::TestCase
     code = ULZSS.encode(string)
     s = ULZSS.decode(code)
     #p [s.length, code.length]
+    if string != s
+      puts code
+      puts s
+    end
     assert(string ==  s)
+    
   end
 end
 
