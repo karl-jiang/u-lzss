@@ -85,7 +85,7 @@ class TC_LZSS < Test::Unit::TestCase
     check_string("hffffafffddfffhffffafffddfff")
     check_string("あなたトマトなす")
     check_string("あなたあなたかぜ")
-    check_string("あ" * 10000)
+    check_string("あ" * 200)
     check_string('http://b.hatena.ne.jp/entry/http://b.hatena.ne.jp/entry/http://b.hatena.ne.jp/entry/http://b.hatena.ne.jp/entry/http://b.hatena.ne.jp/entry/http://b.hatena.ne.jp/entry/http://homedfaaf')
     check_string(File.open("test/sample1.txt").read)
   end
