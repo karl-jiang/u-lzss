@@ -4,7 +4,7 @@
 module ULZSS
   class Window
     attr_reader :flag, :match_pos, :match_len, :offset, :current
-    MAX_LEN = 18
+    MAX_LEN = 17
     MIN_BYTE = 2
     MIN_LEN = 1
     N = 4096
@@ -83,7 +83,7 @@ module ULZSS
             next
           end
           j = k = c = len = 0
-          while @buffer[real_pos + j] == @buffer[@current + j] and j < MAX_LEN
+          while @buffer[real_pos + j] == @buffer[@current + j] and len < MAX_LEN
             # Check whether j is the UTF-8 fisrt byte.
             if j == c
               # Set the current pos to k.
