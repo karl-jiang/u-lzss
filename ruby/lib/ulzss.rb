@@ -182,7 +182,7 @@ module ULZSS
         code = window.match_pos + 
           (window.match_len - Window::MIN_LEN - 1) * 4096
         #p [window.match_pos, window.match_len, code]
-        p (code + 0x20).to_s(16)
+        #p (code + 0x20).to_s(16)
         #p short2utf8(code)
         buffer << short2utf8(code)
       else
