@@ -1,5 +1,5 @@
 #
-#	ULZSS  -- A Data Compression Program for UTF8 string
+#	ULZSS  -- A UTF8-String Compression Program
 #
 module ULZSS
   class Window
@@ -8,6 +8,7 @@ module ULZSS
     MIN_BYTE = 2
     MIN_LEN = 1
     N = 4096
+    NN = N - 0x20
     M = 3 * N
     def initialize(input)
       @buffer = input
@@ -68,7 +69,7 @@ module ULZSS
       return true
     end
 
-    def prvious_char
+    def previous_char
       return @buffer[@current - @match_len, @match_len]
     end
     
@@ -79,7 +80,7 @@ module ULZSS
       if d = @hash[key]
         d.each do |pos|
           real_pos = @offset + pos
-          if @char_count - @byte2pos[real_pos] >= N
+          if @char_count - @byte2pos[real_pos] >= NN
             next
           end
           j = k = c = len = 0
@@ -102,7 +103,7 @@ module ULZSS
           else
             len -= 1
           end
-          if len > MIN_LEN and len > @match_len
+          if len > MIN_LEN and len > @match_len and k > MIN_BYTE
             @match_len = len
             # @match_pos = @current - real_pos 
             p = real_pos
@@ -181,13 +182,13 @@ module ULZSS
         code = window.match_pos + 
           (window.match_len - Window::MIN_LEN - 1) * 4096
         #p [window.match_pos, window.match_len, code]
-        #p (code + 0x20).to_s(16)
+        p (code + 0x20).to_s(16)
         #p short2utf8(code)
         buffer << short2utf8(code)
       else
         # encode the orginal UTF8 char
-        #puts "#{window.prvious_char} #{window.prvious_char.inspect}"
-        buffer << window.prvious_char
+        #puts "#{window.previous_char} #{window.prvious_char.inspect}"
+        buffer << window.previous_char
       end 
       mask <<= 1
       #puts "mask = #{mask}, #{buffer}"
