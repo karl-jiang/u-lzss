@@ -33,6 +33,6 @@ check("(あなた\u1023かぜ", "あなたあなたかぜ");
 
 check_convert("hogehogehoge");
 check_convert("あなたあなたかぜ");
-check_convert('http://b.hatena.ne.jp/entry/http://b.hatena.ne.jp/entry/http://b.hatena.ne.jp/entry/http://b.hatena.ne.jp/entry/http://b.hatena.ne.jp/entry/http://b.hatena.ne.jp/entry/http://homepage.mac.com/naoyuki_hashimoto/iblog/C1310380191/E20060110214546/index.html')
+check_convert('http://b.hatena.ne.jp/entry/http://b.hatena.ne.jp/entry/http://b.hatena.ne.jp/entry/http://b.hatena.ne.jp/entry/http://b.hatena.ne.jp/entry/http://b.hatena.ne.jp/entry/dsf')
 
 

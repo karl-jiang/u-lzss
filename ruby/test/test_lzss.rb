@@ -86,9 +86,8 @@ class TC_LZSS < Test::Unit::TestCase
     check_string("あなたトマトなす")
     check_string("あなたあなたかぜ")
     check_string('["http:\/\/www.100shiki.com\/archives\/2006\/06\/_tabblocom.html","百式 - かっこよく魅せる (Tabblo.com)"]')
-    check_string('http://b.hatena.ne.jp/entry/http://b.hatena.ne.jp/entry/http://b.hatena.ne.jp/entry/http://b.hatena.ne.jp/entry/http://b.hatena.ne.jp/entry/http://b.hatena.ne.jp/entry/http://homepage.mac.com/naoyuki_hashimoto/iblog/C1310380191/E20060110214546/index.html')
+    check_string('http://b.hatena.ne.jp/entry/http://b.hatena.ne.jp/entry/http://b.hatena.ne.jp/entry/http://b.hatena.ne.jp/entry/http://b.hatena.ne.jp/entry/http://b.hatena.ne.jp/entry/http://homedfaaf')
     check_string(File.open("test/sample1.txt").read)
-    puts ULZSS.encode("hogehogehoge")
   end
 
   def test_encode_random
