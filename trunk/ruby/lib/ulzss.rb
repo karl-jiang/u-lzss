@@ -154,7 +154,7 @@ module ULZSS
     when 14
       return 3
     when 15
-      case chur >> 2
+      case chr >> 2
       when 60, 61
         return 4
       when 62
